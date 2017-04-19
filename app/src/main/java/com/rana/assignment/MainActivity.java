@@ -12,14 +12,22 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
+
+import com.rana.assignment.models.RowItem;
+import com.rana.assignment.models.WordCountWrapper;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -35,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int READ_REQUEST = 11;
     private static final int PICKFILE_REQUEST_CODE = 14;
+    private static final String TAG = "MainActivity";
     @BindView(R.id.b_askforfile_mainactivity) Button b_askforfile_mainactivity;
     @BindView(R.id.rv_list_mainactivity) RecyclerView rv_list_mainactivity;
 
@@ -99,17 +108,37 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case PICKFILE_REQUEST_CODE:
-                String pathString = getPath(this, data.getData());
+//                String pathString = getPath(this, data.getData());
+                String pathString = data.getData().toString();
                 if (pathString != null) {
-                    File file = new File(pathString);
+                    File file = null;
+                    try {
+                        file = new File(new URI(pathString));
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    }
                     HashMap<String, Integer> integerHashMap = openFileAndReadContent(file);
                     integerHashMap = sortHashMapByValue(integerHashMap);
-                    
+                    ArrayList<RowItem> arrayList = transformHashMapIntoArraylistForPerformanceAndSimplity(integerHashMap);
+                    AdapterWordsAndCount adapterWordsAndCount = new AdapterWordsAndCount(this, arrayList);
+                    rv_list_mainactivity.setAdapter(adapterWordsAndCount);
+                    rv_list_mainactivity.setLayoutManager(new LinearLayoutManager(this));
                 } else {
                     Toast.makeText(this, "Error : Invalid File Path", Toast.LENGTH_SHORT).show();
                 }
                 break;
         }
+    }
+
+    private ArrayList<RowItem> transformHashMapIntoArraylistForPerformanceAndSimplity(HashMap<String, Integer> integerHashMap) {
+        Object[] keySet = integerHashMap.keySet().toArray();
+        ArrayList<RowItem> arrayList = new ArrayList<>();
+        for (int i = 0; i < integerHashMap.size(); i++) {
+            int wordCount = integerHashMap.get(keySet[i]);
+            WordCountWrapper wrapper = new WordCountWrapper(keySet[i].toString(), wordCount);
+            arrayList.add(wrapper);
+        }
+        return arrayList;
     }
 
     private HashMap<String, Integer> openFileAndReadContent(File file) {
@@ -122,21 +151,29 @@ public class MainActivity extends AppCompatActivity {
             StringBuilder stringBuilder = new StringBuilder();
             while ((c = inputStream.read()) != -1) {
                 if (c == ' ' || c == '\n') {
-                    stringBuilder.append(c);
-                } else {
                     String tempString = stringBuilder.toString();
-                    Integer integer = hashMap.get(tempString);
-                    if (integer != null) {
-                        hashMap.put(tempString, integer + 1);
-                    } else {
-                        hashMap.put(tempString, 1);
-                    }
+                    pushToHashMap(tempString, hashMap);
+                    stringBuilder.delete(0, stringBuilder.length());
+                } else {
+                    Log.e(TAG, String.valueOf((char) c) + "");
+                    stringBuilder.append((char) c);
                 }
             }
+            pushToHashMap(stringBuilder.toString(), hashMap);
         } catch (IOException e) {
             e.printStackTrace();
         }
         return hashMap;
+    }
+
+    private void pushToHashMap(String tempString, HashMap<String, Integer> hashMap) {
+        Integer integer = hashMap.get(tempString);
+        if (integer != null) {
+            hashMap.put(tempString, integer + 1);
+        } else {
+            hashMap.put(tempString, 1);
+        }
+
     }
 
     @Override
