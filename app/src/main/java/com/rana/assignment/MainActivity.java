@@ -19,7 +19,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.rana.assignment.models.RowItem;
-import com.rana.assignment.models.WordCountWrapper;
+import com.rana.assignment.utility.Utility;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,12 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -66,22 +61,6 @@ public class MainActivity extends AppCompatActivity {
         return "com.android.externalstorage.documents".equals(uri.getAuthority());
     }
 
-    public static <K, V extends Comparable<? super V>> HashMap<K, V> sortHashMapByValue(HashMap<K, V> map) {
-        List<HashMap.Entry<K, V>> list =
-                new LinkedList<>(map.entrySet());
-        Collections.sort(list, new Comparator<HashMap.Entry<K, V>>() {
-            @Override
-            public int compare(HashMap.Entry<K, V> o1, HashMap.Entry<K, V> o2) {
-                return (o1.getValue()).compareTo(o2.getValue());
-            }
-        });
-
-        HashMap<K, V> result = new LinkedHashMap<>();
-        for (HashMap.Entry<K, V> entry : list) {
-            result.put(entry.getKey(), entry.getValue());
-        }
-        return result;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,8 +97,8 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                     HashMap<String, Integer> integerHashMap = openFileAndReadContent(file);
-                    integerHashMap = sortHashMapByValue(integerHashMap);
-                    ArrayList<RowItem> arrayList = transformHashMapIntoArraylistForPerformanceAndSimplity(integerHashMap);
+                    integerHashMap = Utility.sortHashMapByValue(integerHashMap);
+                    ArrayList<RowItem> arrayList = Utility.transformHashMapIntoArraylistForPerformanceAndSimplity(integerHashMap);
                     AdapterWordsAndCount adapterWordsAndCount = new AdapterWordsAndCount(this, arrayList);
                     rv_list_mainactivity.setAdapter(adapterWordsAndCount);
                     rv_list_mainactivity.setLayoutManager(new LinearLayoutManager(this));
@@ -130,16 +109,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private ArrayList<RowItem> transformHashMapIntoArraylistForPerformanceAndSimplity(HashMap<String, Integer> integerHashMap) {
-        Object[] keySet = integerHashMap.keySet().toArray();
-        ArrayList<RowItem> arrayList = new ArrayList<>();
-        for (int i = 0; i < integerHashMap.size(); i++) {
-            int wordCount = integerHashMap.get(keySet[i]);
-            WordCountWrapper wrapper = new WordCountWrapper(keySet[i].toString(), wordCount);
-            arrayList.add(wrapper);
-        }
-        return arrayList;
-    }
 
     private HashMap<String, Integer> openFileAndReadContent(File file) {
         BufferedReader br = null;
