@@ -16,7 +16,16 @@ import android.support.v7.widget.RecyclerView;
 import android.widget.Button;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -48,6 +57,22 @@ public class MainActivity extends AppCompatActivity {
         return "com.android.externalstorage.documents".equals(uri.getAuthority());
     }
 
+    public static <K, V extends Comparable<? super V>> HashMap<K, V> sortHashMapByValue(HashMap<K, V> map) {
+        List<HashMap.Entry<K, V>> list =
+                new LinkedList<>(map.entrySet());
+        Collections.sort(list, new Comparator<HashMap.Entry<K, V>>() {
+            @Override
+            public int compare(HashMap.Entry<K, V> o1, HashMap.Entry<K, V> o2) {
+                return (o1.getValue()).compareTo(o2.getValue());
+            }
+        });
+
+        HashMap<K, V> result = new LinkedHashMap<>();
+        for (HashMap.Entry<K, V> entry : list) {
+            result.put(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +102,9 @@ public class MainActivity extends AppCompatActivity {
                 String pathString = getPath(this, data.getData());
                 if (pathString != null) {
                     File file = new File(pathString);
-                    openFileAndShowContent(file);
+                    HashMap<String, Integer> integerHashMap = openFileAndReadContent(file);
+                    integerHashMap = sortHashMapByValue(integerHashMap);
+                    
                 } else {
                     Toast.makeText(this, "Error : Invalid File Path", Toast.LENGTH_SHORT).show();
                 }
@@ -85,8 +112,31 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void openFileAndShowContent(File file) {
-        
+    private HashMap<String, Integer> openFileAndReadContent(File file) {
+        BufferedReader br = null;
+        HashMap<String, Integer> hashMap = new HashMap<>();
+        try {
+            FileInputStream inputStream = new FileInputStream(file);
+
+            int c;
+            StringBuilder stringBuilder = new StringBuilder();
+            while ((c = inputStream.read()) != -1) {
+                if (c == ' ' || c == '\n') {
+                    stringBuilder.append(c);
+                } else {
+                    String tempString = stringBuilder.toString();
+                    Integer integer = hashMap.get(tempString);
+                    if (integer != null) {
+                        hashMap.put(tempString, integer + 1);
+                    } else {
+                        hashMap.put(tempString, 1);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return hashMap;
     }
 
     @Override
